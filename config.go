@@ -18,12 +18,25 @@ import (
 	"time"
 
 	"github.com/openpcc/openpcc/transparency"
-	"github.com/openpcc/openpcc/transparency/ghidentity"
 )
 
 var (
 	// DefaultAPIURL is a variable so it can be set during build time.
 	DefaultAPIURL = ""
+)
+
+// IdentityPolicySource enumerates the different options for where the identity policy
+// should be sourced from.
+type IdentityPolicySource int
+
+const (
+	// IdentityPolicySourceConfigured indicates that the identity policy is configured in
+	// directly when instantiating the client. This is the default.
+	IdentityPolicySourceConfigured IdentityPolicySource = iota
+	// IdentityPolicySourceRemote indicates that the identity policy is sourced from the
+	// remote config.
+	// WARNING: This is not safe and should only be used for testing/development.
+	IdentityPolicySourceUnsafeRemote
 )
 
 // Config allows for configuration of clients via YAML files.
@@ -63,8 +76,12 @@ type Config struct {
 	// TransparencyVerifier is the configuration for the sigstore bundle verifier.
 	TransparencyVerifier transparency.VerifierConfig `yaml:"verify"`
 
+	// TransparencyIdentityPolicySource is the source of the identity policy used to
+	// verify the remote config returned by the auth service.
+	TransparencyIdentityPolicySource IdentityPolicySource `yaml:"remote_config_identity_policy_source"`
+
 	// TransparencyIdentityPolicy is the identity policy used to verify the remote config returned by the auth service.
-	TransparencyIdentityPolicy transparency.IdentityPolicy `yaml:"remote_config_identity_policy"`
+	TransparencyIdentityPolicy *transparency.IdentityPolicy `yaml:"remote_config_identity_policy"`
 
 	// WalletCloseTimeout is the maximum amount of time the client will wait for the wallet to close.
 	WalletCloseTimeout time.Duration `yaml:"wallet_close_timeout"`
@@ -83,13 +100,13 @@ func DefaultConfig() Config {
 			Environment:               transparency.EnvironmentProd,
 			LocalTrustedRootCachePath: "./.confsec/.sigstore-cache",
 		},
-		TransparencyIdentityPolicy:  ghidentity.Policy(),
-		PingRouter:                  true,
-		MaxCandidateNodes:           3,
-		MaxPrefetchedCandidateNodes: 3,
-		DefaultRequestParams:        DefaultRequestParams(),
-		ConcurrentRequestsTarget:    2,
-		WalletCloseTimeout:          90 * time.Second,
+		PingRouter:                       true,
+		MaxCandidateNodes:                3,
+		MaxPrefetchedCandidateNodes:      3,
+		DefaultRequestParams:             DefaultRequestParams(),
+		ConcurrentRequestsTarget:         2,
+		TransparencyIdentityPolicySource: IdentityPolicySourceConfigured,
+		WalletCloseTimeout:               90 * time.Second,
 	}
 
 	return cfg

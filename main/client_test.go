@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/openpcc/openpcc"
+	"github.com/openpcc/openpcc/inttest"
 	"github.com/openpcc/openpcc/main"
 	"github.com/openpcc/openpcc/models"
 	ctest "github.com/openpcc/openpcc/test"
@@ -33,19 +34,35 @@ const (
 )
 
 func TestClientCreate(t *testing.T) {
+	localDevIdPolicy := inttest.LocalDevIdentityPolicy()
 	successCases := map[string]struct {
+		identityPolicySource     int
+		oidcIssuer               string
+		oidcIssuerRegex          string
+		oidcSubject              string
+		oidcSubjectRegex         string
 		concurrentRequestsTarget int
 		maxCandidateNodes        int
 		defaultNodeTags          []string
 		env                      string
 	}{
 		"ok, all defaults": {
+			identityPolicySource:     int(openpcc.IdentityPolicySourceConfigured),
+			oidcIssuer:               localDevIdPolicy.OIDCIssuer,
+			oidcIssuerRegex:          localDevIdPolicy.OIDCIssuerRegex,
+			oidcSubject:              localDevIdPolicy.OIDCSubject,
+			oidcSubjectRegex:         localDevIdPolicy.OIDCSubjectRegex,
 			concurrentRequestsTarget: 0,
 			maxCandidateNodes:        0,
 			defaultNodeTags:          nil,
 			env:                      "",
 		},
 		"ok, custom configs": {
+			identityPolicySource:     int(openpcc.IdentityPolicySourceUnsafeRemote),
+			oidcIssuer:               "",
+			oidcIssuerRegex:          "",
+			oidcSubject:              "",
+			oidcSubjectRegex:         "",
 			concurrentRequestsTarget: 10,
 			maxCandidateNodes:        10,
 			defaultNodeTags:          []string{"tag1", "tag2"},
@@ -56,7 +73,13 @@ func TestClientCreate(t *testing.T) {
 		for name, tc := range successCases {
 			t.Run(name, func(t *testing.T) {
 				handle, err := main.ClientCreate(
+					"my-api-url",
 					"my-api-key",
+					int(openpcc.IdentityPolicySourceUnsafeRemote),
+					"",
+					"",
+					"",
+					"",
 					tc.concurrentRequestsTarget,
 					tc.maxCandidateNodes,
 					tc.defaultNodeTags,
@@ -75,7 +98,7 @@ func TestClientCreate(t *testing.T) {
 func TestClientDestroy(t *testing.T) {
 	main.WithGetOpts(getOpts, func() {
 		t.Run("ok", func(t *testing.T) {
-			handle, err := main.ClientCreate("my-api-key", 0, 0, nil, "")
+			handle, err := main.ClientCreate("my-api-url", "my-api-key", 1, "", "", "", "", 0, 0, nil, "")
 			require.NoError(t, err)
 			require.Greater(t, handle, uintptr(0))
 
@@ -96,7 +119,7 @@ func TestClientGetDefaultCreditAmountPerRequest(t *testing.T) {
 			model, err := models.GetModel("llama3.2:1b")
 			require.NoError(t, err)
 			tags := []string{"llm", "model=" + model.Name}
-			handle, err := main.ClientCreate("my-api-key", 0, 0, tags, "")
+			handle, err := main.ClientCreate("my-api-url", "my-api-key", 1, "", "", "", "", 0, 0, tags, "")
 			require.NoError(t, err)
 			require.Greater(t, handle, uintptr(0))
 			defer main.ClientDestroy(handle)
@@ -117,7 +140,7 @@ func TestClientGetMaxCandidateNodes(t *testing.T) {
 	main.WithGetOpts(getOpts, func() {
 		t.Run("ok", func(t *testing.T) {
 			maxCandidateNodes := 10
-			handle, err := main.ClientCreate("my-api-key", 0, maxCandidateNodes, nil, "")
+			handle, err := main.ClientCreate("my-api-url", "my-api-key", 1, "", "", "", "", 0, maxCandidateNodes, nil, "")
 			require.NoError(t, err)
 			require.Greater(t, handle, uintptr(0))
 			defer main.ClientDestroy(handle)
@@ -138,7 +161,7 @@ func TestClientGetDefaultNodeTags(t *testing.T) {
 	main.WithGetOpts(getOpts, func() {
 		t.Run("ok", func(t *testing.T) {
 			tags := []string{"foo=bar", "baz=qux"}
-			handle, err := main.ClientCreate("my-api-key", 0, 0, tags, "")
+			handle, err := main.ClientCreate("my-api-url", "my-api-key", 1, "", "", "", "", 0, 0, tags, "")
 			require.NoError(t, err)
 			require.Greater(t, handle, uintptr(0))
 			defer main.ClientDestroy(handle)
@@ -158,7 +181,7 @@ func TestClientGetDefaultNodeTags(t *testing.T) {
 func TestClientSetDefaultNodeTags(t *testing.T) {
 	main.WithGetOpts(getOpts, func() {
 		t.Run("ok", func(t *testing.T) {
-			handle, err := main.ClientCreate("my-api-key", 0, 0, nil, "")
+			handle, err := main.ClientCreate("my-api-url", "my-api-key", 1, "", "", "", "", 0, 0, nil, "")
 			require.NoError(t, err)
 			require.Greater(t, handle, uintptr(0))
 			defer main.ClientDestroy(handle)
@@ -183,7 +206,7 @@ func TestClientSetDefaultNodeTags(t *testing.T) {
 func TestClientGetWalletStatus(t *testing.T) {
 	main.WithGetOpts(getOpts, func() {
 		t.Run("ok", func(t *testing.T) {
-			handle, err := main.ClientCreate("my-api-key", 0, 0, nil, "")
+			handle, err := main.ClientCreate("my-api-url", "my-api-key", 1, "", "", "", "", 0, 0, nil, "")
 			require.NoError(t, err)
 			require.Greater(t, handle, uintptr(0))
 			defer main.ClientDestroy(handle)

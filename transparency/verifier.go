@@ -27,6 +27,7 @@ import (
 	"time"
 
 	spb "github.com/in-toto/attestation/go/v1"
+	"github.com/openpcc/openpcc/gen/protos"
 	bundlepb "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
@@ -102,6 +103,30 @@ type IdentityPolicy struct {
 	OIDCIssuerRegex  string `yaml:"oidc_issuer_regex"`
 	OIDCSubject      string `yaml:"oidc_subject"`
 	OIDCSubjectRegex string `yaml:"oidc_subject_regex"`
+}
+
+// ToProto converts the identity policy to a protobuf representation [protos.IdentityPolicy].
+func (p IdentityPolicy) ToProto() *protos.IdentityPolicy {
+	pb := &protos.IdentityPolicy_builder{
+		OidcIssuer:       &p.OIDCIssuer,
+		OidcIssuerRegex:  &p.OIDCIssuerRegex,
+		OidcSubject:      &p.OIDCSubject,
+		OidcSubjectRegex: &p.OIDCSubjectRegex,
+	}
+	return pb.Build()
+}
+
+// FromProto converts a protobuf representation [protos.IdentityPolicy] to an [IdentityPolicy].
+func IdentityPolicyFromProto(pb *protos.IdentityPolicy) IdentityPolicy {
+	if pb == nil {
+		return IdentityPolicy{}
+	}
+	return IdentityPolicy{
+		OIDCIssuer:       pb.GetOidcIssuer(),
+		OIDCIssuerRegex:  pb.GetOidcIssuerRegex(),
+		OIDCSubject:      pb.GetOidcSubject(),
+		OIDCSubjectRegex: pb.GetOidcSubjectRegex(),
+	}
 }
 
 type BundleMetadata struct {

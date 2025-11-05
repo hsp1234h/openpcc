@@ -58,10 +58,12 @@ func TestNewClient(t *testing.T) {
 
 		w := &ctest.FakeWallet{}
 		nodeFinder := &ctest.FakeNodeFinder{}
+		idPolicy := test.LocalDevIdentityPolicy()
 
 		cfg := openpcc.DefaultConfig()
 		cfg.APIKey = "test api key"
 		cfg.APIURL = "localhost:9999"
+		cfg.TransparencyIdentityPolicy = &idPolicy
 		modFunc(&cfg)
 
 		authClient := &ctest.FakeAuthClient{
@@ -161,6 +163,9 @@ func TestNewClient(t *testing.T) {
 		"fail, multiple models in default node tags": func(c *openpcc.Config) {
 			c.DefaultRequestParams.NodeTags = []string{"llm", "model=llama3.2:1b", "model=llama3.2:2b"}
 		},
+		"fail, no identity policy": func(c *openpcc.Config) {
+			c.TransparencyIdentityPolicy = nil
+		},
 	}
 
 	for name, tc := range failTests {
@@ -183,10 +188,12 @@ func TestSetDefaultCreditAmountPerRequest(t *testing.T) {
 
 		w := &ctest.FakeWallet{}
 		nodeFinder := &ctest.FakeNodeFinder{}
+		idPolicy := test.LocalDevIdentityPolicy()
 
 		cfg := openpcc.DefaultConfig()
 		cfg.APIKey = "test api key"
 		cfg.APIURL = "localhost:9999"
+		cfg.TransparencyIdentityPolicy = &idPolicy
 		authClient := &ctest.FakeAuthClient{
 			RouterURLFunc: func() string {
 				return "http://example.com/router"
@@ -240,9 +247,12 @@ func TestSetDefaultNodeTags(t *testing.T) {
 		w := &ctest.FakeWallet{}
 		nodeFinder := &ctest.FakeNodeFinder{}
 
+		idPolicy := test.LocalDevIdentityPolicy()
+
 		cfg := openpcc.DefaultConfig()
 		cfg.APIKey = "test api key"
 		cfg.APIURL = "localhost:9999"
+		cfg.TransparencyIdentityPolicy = &idPolicy
 		authClient := &ctest.FakeAuthClient{
 			RouterURLFunc: func() string {
 				return "http://example.com/router"
@@ -328,9 +338,12 @@ func TestClientAsTransport(t *testing.T) {
 			Timeout: 5 * time.Second,
 		}
 
+		idPolicy := test.LocalDevIdentityPolicy()
+
 		cfg := openpcc.DefaultConfig()
 		cfg.APIKey = apiKey
 		cfg.APIURL = "localhost:9999"
+		cfg.TransparencyIdentityPolicy = &idPolicy
 
 		tcloudClient, err := openpcc.NewFromConfig(
 			t.Context(),

@@ -57,6 +57,8 @@ func TestNewAuthClient(t *testing.T) {
 		}
 	}
 
+	localDevIdPolicy := test.LocalDevIdentityPolicy()
+
 	validConfigResponse := func(t *testing.T) *protos.AuthConfigResponse {
 		finder := transparency.NewBundleFinder(test.LocalDevTransparencyFSStore())
 		ohttpBundles, err := finder.FindStatementBundles(t.Context(), transparency.StatementBundleQuery{
@@ -84,6 +86,8 @@ func TestNewAuthClient(t *testing.T) {
 			ohttpRelay1, ohttpRelay2,
 		})
 
+		resp.SetIdentityPolicy(localDevIdPolicy.ToProto())
+
 		return resp
 	}
 
@@ -101,15 +105,11 @@ func TestNewAuthClient(t *testing.T) {
 			httpfmt.WriteBinaryProto(w, r, response)
 		}))
 
-		cfg := client.DefaultConfig()
-		cfg.BaseURL = handlerURL
-		cfg.APIKey = "test-key"
-		cfg.TransparencyIdentityPolicy = test.LocalDevIdentityPolicy()
+		baseCfg := client.DefaultConfig()
+		baseCfg.BaseURL = handlerURL
+		baseCfg.APIKey = "test-key"
 
 		verifier, err := test.LocalDevVerifier()
-		require.NoError(t, err)
-
-		c, err := client.New(t.Context(), cfg, verifier, http.DefaultClient)
 		require.NoError(t, err)
 
 		want := client.RemoteConfig{
@@ -118,9 +118,28 @@ func TestNewAuthClient(t *testing.T) {
 			OHTTPRelayURLs:          []string{"https://example.com/relay-1", "https://example.com/relay-2"},
 			OHTTPKeyConfigs:         newOHTTPKeyConfigs(),
 			OHTTPKeyRotationPeriods: newOHTTPKeyRotationPeriods(),
+			IdentityPolicy:          localDevIdPolicy,
 		}
 
-		require.Equal(t, want, c.RemoteConfig())
+		t.Run("configured identity policy", func(t *testing.T) {
+			cfg := baseCfg
+			cfg.TransparencyIdentityPolicy = &localDevIdPolicy
+
+			c, err := client.New(t.Context(), baseCfg, verifier, http.DefaultClient)
+
+			require.NoError(t, err)
+			require.Equal(t, want, c.RemoteConfig())
+		})
+
+		t.Run("identity policy from remote config", func(t *testing.T) {
+			cfg := baseCfg
+			cfg.TransparencyIdentityPolicy = nil
+
+			c, err := client.New(t.Context(), baseCfg, verifier, http.DefaultClient)
+
+			require.NoError(t, err)
+			require.Equal(t, want, c.RemoteConfig())
+		})
 	})
 
 	t.Run("fail, tampered with ohttp key configs bundle", func(t *testing.T) {
@@ -134,7 +153,7 @@ func TestNewAuthClient(t *testing.T) {
 		cfg := client.DefaultConfig()
 		cfg.BaseURL = handlerURL
 		cfg.APIKey = "test-key"
-		cfg.TransparencyIdentityPolicy = test.LocalDevIdentityPolicy()
+		cfg.TransparencyIdentityPolicy = &localDevIdPolicy
 
 		verifier, err := test.LocalDevVerifier()
 		require.NoError(t, err)
@@ -154,7 +173,7 @@ func TestNewAuthClient(t *testing.T) {
 		cfg := client.DefaultConfig()
 		cfg.BaseURL = handlerURL
 		cfg.APIKey = "test-key"
-		cfg.TransparencyIdentityPolicy = test.LocalDevIdentityPolicy()
+		cfg.TransparencyIdentityPolicy = &localDevIdPolicy
 
 		verifier, err := test.LocalDevVerifier()
 		require.NoError(t, err)
@@ -171,7 +190,7 @@ func TestNewAuthClient(t *testing.T) {
 		cfg := client.DefaultConfig()
 		cfg.BaseURL = handlerURL
 		cfg.APIKey = "test-key"
-		cfg.TransparencyIdentityPolicy = test.LocalDevIdentityPolicy()
+		cfg.TransparencyIdentityPolicy = &localDevIdPolicy
 
 		verifier, err := test.LocalDevVerifier()
 		require.NoError(t, err)
@@ -184,7 +203,7 @@ func TestNewAuthClient(t *testing.T) {
 		cfg := client.DefaultConfig()
 		cfg.BaseURL = fmt.Sprintf("http://127.0.0.1:%d", test.FreePort(t))
 		cfg.APIKey = "test-key"
-		cfg.TransparencyIdentityPolicy = test.LocalDevIdentityPolicy()
+		cfg.TransparencyIdentityPolicy = &localDevIdPolicy
 		cfg.ConfigRequestMaxTimeout = time.Millisecond * 100
 
 		verifier, err := test.LocalDevVerifier()

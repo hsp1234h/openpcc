@@ -130,6 +130,10 @@ func NewFromConfig(ctx context.Context, cfg Config, opts ...Option) (*Client, er
 	}
 	slog.Info("creating openpcc client with auth server url", "api_url", cfg.APIURL)
 
+	if cfg.TransparencyIdentityPolicySource == IdentityPolicySourceConfigured && cfg.TransparencyIdentityPolicy == nil {
+		return nil, errors.New("transparency identity policy source is 'configured' but no policy was provided")
+	}
+
 	suite := hpke.NewSuite(hpke.KEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES128GCM)
 
 	// Parse the default tags (if any)

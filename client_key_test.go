@@ -124,10 +124,12 @@ func TestOHTTPKeyConfigSelection(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := &ctest.FakeWallet{}
 			nodeFinder := &ctest.FakeNodeFinder{}
+			idPolicy := test.LocalDevIdentityPolicy()
 
 			cfg := openpcc.DefaultConfig()
 			cfg.APIKey = "test api key"
 			cfg.APIURL = "localhost:9999"
+			cfg.TransparencyIdentityPolicy = &idPolicy
 			authClient := &ctest.FakeAuthClient{
 				RouterURLFunc: func() string {
 					return "http://example.com/router"

@@ -29,5 +29,5 @@ func newVerifier(
 	//nolint
 	cfg.build = buildConfig{} // can't seem to add nolint line above buildConfig. Assign to make linters happy.
 	// Note: make sure any changes here are mirrored in `client_fake.go`.
-	return verify.NewConfidentSecurityVerifier(transparencyVerifier, cfg.TransparencyIdentityPolicy)
+	return verify.NewConfidentSecurityVerifier(transparencyVerifier, *cfg.TransparencyIdentityPolicy)
 }

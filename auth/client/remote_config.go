@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"github.com/openpcc/openpcc/gen/protos"
 	"github.com/openpcc/openpcc/httpretry"
 	"github.com/openpcc/openpcc/otel/otelutil"
+	"github.com/openpcc/openpcc/transparency"
 	"github.com/openpcc/openpcc/transparency/statements"
 	"google.golang.org/protobuf/proto"
 )
@@ -43,6 +45,7 @@ type RemoteConfig struct {
 	OHTTPRelayURLs          []string
 	OHTTPKeyConfigs         ohttp.KeyConfigs
 	OHTTPKeyRotationPeriods []gateway.KeyRotationPeriodWithID
+	IdentityPolicy          transparency.IdentityPolicy
 }
 
 func fetchRemoteConfig(ctx context.Context, cfg Config, httpClient *http.Client) (*protos.AuthConfigResponse, error) {
@@ -90,8 +93,16 @@ func verifyRemoteConfig(cfg Config, resp *protos.AuthConfigResponse, verifier Tr
 		return RemoteConfig{}, nil, err
 	}
 
+	var idPolicy transparency.IdentityPolicy
+	if cfg.TransparencyIdentityPolicy != nil {
+		idPolicy = *cfg.TransparencyIdentityPolicy
+	} else {
+		slog.Warn("no transparency identity policy provided, using identity policy from remote config. THIS IS UNSAFE AND SHOULD NOT BE USED IN PRODUCTION.")
+		idPolicy = remoteCfg.IdentityPolicy
+	}
+
 	// verify and retrieve the currency key
-	currencyKeyStatement, _, err := verifier.VerifyStatementPredicate(resp.GetCurrencyKeyBundle(), "jwkRaw", cfg.TransparencyIdentityPolicy)
+	currencyKeyStatement, _, err := verifier.VerifyStatementPredicate(resp.GetCurrencyKeyBundle(), "jwkRaw", idPolicy)
 	if err != nil {
 		return RemoteConfig{}, nil, fmt.Errorf("failed to verify currency key statement: %w", err)
 	}
@@ -107,7 +118,7 @@ func verifyRemoteConfig(cfg Config, resp *protos.AuthConfigResponse, verifier Tr
 	}
 
 	// verify and retrieve the ohttp key configs
-	ohttpKeysStatement, _, err := verifier.VerifyStatementPredicate(resp.GetOhttpKeyConfigsBundle(), "ohttpKeys", cfg.TransparencyIdentityPolicy)
+	ohttpKeysStatement, _, err := verifier.VerifyStatementPredicate(resp.GetOhttpKeyConfigsBundle(), "ohttpKeys", idPolicy)
 	if err != nil {
 		return RemoteConfig{}, nil, fmt.Errorf("failed to verify ohttp keys statement: %w", err)
 	}
@@ -150,5 +161,6 @@ func newRemoteConfigFromURLs(resp *protos.AuthConfigResponse) (RemoteConfig, err
 		RouterURL:      routerURL.String(),
 		BankURL:        bankURL.String(),
 		OHTTPRelayURLs: relayURLs,
+		IdentityPolicy: transparency.IdentityPolicyFromProto(resp.GetIdentityPolicy()),
 	}, nil
 }

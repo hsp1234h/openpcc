@@ -30,14 +30,16 @@ import (
 )
 
 var (
-	ErrNoAPIKey               = errors.New("missing API key")
-	ErrInvalidEnv             = errors.New("invalid environment")
-	ErrClientNotFound         = errors.New("client not found")
-	ErrResponseNotFound       = errors.New("response not found")
-	ErrResponseIsStreaming    = errors.New("response body is streaming")
-	ErrResponseIsNotStreaming = errors.New("response body is not streaming")
-	ErrResponseStreamNotFound = errors.New("response stream not found")
-	ErrSerializationFailure   = errors.New("serialization failure")
+	ErrNoAPIURL                    = errors.New("missing API URL")
+	ErrNoAPIKey                    = errors.New("missing API key")
+	ErrInvalidIdentityPolicySource = errors.New("invalid identity policy source")
+	ErrInvalidEnv                  = errors.New("invalid environment")
+	ErrClientNotFound              = errors.New("client not found")
+	ErrResponseNotFound            = errors.New("response not found")
+	ErrResponseIsStreaming         = errors.New("response body is streaming")
+	ErrResponseIsNotStreaming      = errors.New("response body is not streaming")
+	ErrResponseStreamNotFound      = errors.New("response stream not found")
+	ErrSerializationFailure        = errors.New("serialization failure")
 )
 
 // cStrArrayToGoStrSlice converts a C array of strings to a Go slice of strings.

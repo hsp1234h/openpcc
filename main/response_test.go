@@ -492,7 +492,19 @@ func newClientForNodes(t *testing.T, nodes []openpcc.VerifiedNode, endpointURL s
 	var clientHandle uintptr
 	var err error
 	main.WithGetOpts(getOpts, func() {
-		clientHandle, err = main.ClientCreate("my-api-key", 0, 0, []string{"llm", "model=llama3.2:1b"}, "")
+		clientHandle, err = main.ClientCreate(
+			"my-api-url",
+			"my-api-key",
+			int(openpcc.IdentityPolicySourceUnsafeRemote),
+			"",
+			"",
+			"",
+			"",
+			0,
+			0,
+			[]string{"llm", "model=llama3.2:1b"},
+			"",
+		)
 	})
 	require.NoError(t, err)
 	return clientHandle

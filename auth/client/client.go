@@ -50,7 +50,7 @@ type Config struct {
 	BaseURL                    string
 	APIKey                     string
 	RefillMultiple             int64
-	TransparencyIdentityPolicy transparency.IdentityPolicy
+	TransparencyIdentityPolicy *transparency.IdentityPolicy
 	ConfigRequestMaxTimeout    time.Duration
 	CreditRequestMaxTimeout    time.Duration
 }

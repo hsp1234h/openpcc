@@ -36,7 +36,13 @@ import (
 
 // ClientCreate is a simple Go wrapper for Confsec_ClientCreate
 func ClientCreate(
+	apiURL string,
 	apiKey string,
+	identityPolicySource int,
+	oidcIssuer string,
+	oidcIssuerRegex string,
+	oidcSubject string,
+	oidcSubjectRegex string,
 	concurrentRequestsTarget int,
 	maxCandidateNodes int,
 	defaultNodeTags []string,
@@ -56,7 +62,13 @@ func ClientCreate(
 	}
 
 	clientID := Confsec_ClientCreate(
+		C.CString(apiURL),
 		C.CString(apiKey),
+		C.int(identityPolicySource),
+		C.CString(oidcIssuer),
+		C.CString(oidcIssuerRegex),
+		C.CString(oidcSubject),
+		C.CString(oidcSubjectRegex),
 		C.int(concurrentRequestsTarget),
 		C.int(maxCandidateNodes),
 		nodeTags,

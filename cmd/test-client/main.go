@@ -21,7 +21,7 @@ func runTestClientCmd() error {
 	cfg.APIKey = "test-key"
 	cfg.PingRouter = false
 	cfg.TransparencyVerifier = inttest.LocalDevVerifierConfig()
-	cfg.TransparencyIdentityPolicy = devPolicy
+	cfg.TransparencyIdentityPolicy = &devPolicy
 
 	client, err := openpcc.NewFromConfig(ctx, cfg, openpcc.WithFakeAttestationSecret("123456"))
 	if err != nil {

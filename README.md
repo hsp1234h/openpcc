@@ -30,11 +30,16 @@ import (
 func makePCCRequest() error {
     ctx := context.Background()
 
+    identityPolicy := transparency.IdentityPolicy{
+		OIDCSubjectRegex: "^https://github.com/confidentsecurity/T/.github/workflows.*",
+		OIDCIssuerRegex:  "https://token.actions.githubusercontent.com",
+    }
+
     cfg := openpcc.DefaultConfig()
     cfg.APIURL = "https://app.confident.security"
     cfg.APIKey = "{Your API Key here}"
     cfg.TransparencyVerifier = transparency.DefaultVerifierConfig()
-    cfg.TransparencyIdentityPolicy = openpcc.DefaultConfig()
+    cfg.TransparencyIdentityPolicy = &identityPolicy
 
     client, err := openpcc.NewFromConfig(ctx, cfg)
     if err != nil {
@@ -44,7 +49,7 @@ func makePCCRequest() error {
     // Inference requests use OpenAI API generate format
     body := "{\"model\":\"qwen3:1.7b\",\"prompt\":\"why is the sky blue?\"}"
     // nosemgrep: problem-based-packs.insecure-transport.go-stdlib.http-customized-request.http-customized-request
-    req, err := http.NewRequest("POST", "http://confsec.invalid/generate", strings.NewReader(body))
+    req, err := http.NewRequest("POST", "http://confsec.invalid/v1/completions", strings.NewReader(body))
     if err != nil {
         return err
     }

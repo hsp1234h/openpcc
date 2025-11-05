@@ -24,21 +24,31 @@ import (
 	"github.com/openpcc/openpcc/auth/credentialing"
 	"github.com/openpcc/openpcc/gateway"
 	"github.com/openpcc/openpcc/internal/test/anonpaytest"
+	"github.com/openpcc/openpcc/inttest"
+	"github.com/openpcc/openpcc/transparency"
 )
 
 type FakeAuthClient struct {
-	RouterURLFunc           func() string
-	OHTTPKeyConfigs         ohttp.KeyConfigs
-	OHTTPKeyRotationPeriods []gateway.KeyRotationPeriodWithID
+	RouterURLFunc              func() string
+	OHTTPKeyConfigs            ohttp.KeyConfigs
+	OHTTPKeyRotationPeriods    []gateway.KeyRotationPeriodWithID
+	TransparencyIdentityPolicy *transparency.IdentityPolicy
 }
 
 func (m *FakeAuthClient) RemoteConfig() authclient.RemoteConfig {
+	var idPolicy transparency.IdentityPolicy
+	if m.TransparencyIdentityPolicy != nil {
+		idPolicy = *m.TransparencyIdentityPolicy
+	} else {
+		idPolicy = inttest.LocalDevIdentityPolicy()
+	}
 	return authclient.RemoteConfig{
 		RouterURL:               m.RouterURLFunc(),
 		BankURL:                 "",
 		OHTTPRelayURLs:          []string{"fake.relay.invalid"},
 		OHTTPKeyConfigs:         m.OHTTPKeyConfigs,
 		OHTTPKeyRotationPeriods: m.OHTTPKeyRotationPeriods,
+		IdentityPolicy:          idPolicy,
 	}
 }
 

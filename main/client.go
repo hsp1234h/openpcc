@@ -70,7 +70,13 @@ func WithGetOpts(getOptsFn GetOptsFn, fn func()) {
 //
 //export Confsec_ClientCreate
 func Confsec_ClientCreate( //nolint:revive
+	apiURL *C.char,
 	apiKey *C.char,
+	identityPolicySource C.int,
+	oidcIssuer *C.char,
+	oidcIssuerRegex *C.char,
+	oidcSubject *C.char,
+	oidcSubjectRegex *C.char,
 	concurrentRequestsTarget C.int,
 	maxCandidateNodes C.int,
 	defaultNodeTags **C.char,
@@ -78,9 +84,21 @@ func Confsec_ClientCreate( //nolint:revive
 	env *C.char,
 	errStr **C.char,
 ) C.uintptr_t {
+	// Error early if no API URL is provided
+	if apiURL == nil {
+		setError(errStr, ErrNoAPIURL)
+		return C.uintptr_t(0)
+	}
 	// Error early if no API key is provided
 	if apiKey == nil {
 		setError(errStr, ErrNoAPIKey)
+		return C.uintptr_t(0)
+	}
+	// Error early if the identity policy source is invalid
+	idPolicySource := openpcc.IdentityPolicySource(identityPolicySource)
+	if idPolicySource != openpcc.IdentityPolicySourceConfigured &&
+		idPolicySource != openpcc.IdentityPolicySourceUnsafeRemote {
+		setError(errStr, ErrInvalidIdentityPolicySource)
 		return C.uintptr_t(0)
 	}
 
@@ -92,25 +110,25 @@ func Confsec_ClientCreate( //nolint:revive
 		transparencyEnv = transparency.Environment(C.GoString(env))
 	}
 
-	// Determine API URL from the environment
-	var apiURL string
-	switch transparencyEnv {
-	case transparency.EnvironmentProd:
-		apiURL = prodAPIURL
-	case transparency.EnvironmentStaging:
-		apiURL = stagingAPIURL
-	default:
-		setError(errStr, ErrInvalidEnv)
-		return C.uintptr_t(0)
-	}
-
 	// Collect default node tags into a slice of strings
 	nodeTags := cStrArrayToGoStrSlice(defaultNodeTags, defaultNodeTagsCount)
 
 	config := openpcc.DefaultConfig()
 	config.APIKey = C.GoString(apiKey)
-	config.APIURL = apiURL
+	config.APIURL = C.GoString(apiURL)
 	config.TransparencyVerifier.Environment = transparencyEnv
+	config.TransparencyIdentityPolicySource = idPolicySource
+	// Only set the identity policy if the source is 'configured'
+	if idPolicySource == openpcc.IdentityPolicySourceConfigured {
+		config.TransparencyIdentityPolicy = &transparency.IdentityPolicy{
+			OIDCIssuer:       C.GoString(oidcIssuer),
+			OIDCIssuerRegex:  C.GoString(oidcIssuerRegex),
+			OIDCSubject:      C.GoString(oidcSubject),
+			OIDCSubjectRegex: C.GoString(oidcSubjectRegex),
+		}
+	} else {
+		config.TransparencyIdentityPolicy = nil
+	}
 	// Treat 0 as "not set" for numeric config options
 	if maxCandidateNodes > C.int(0) {
 		config.MaxCandidateNodes = int(maxCandidateNodes)

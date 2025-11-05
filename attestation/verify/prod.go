@@ -1,0 +1,324 @@
+// Copyright 2025 Nonvolatile Inc. d/b/a Confident Security
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     https://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+package verify
+
+import (
+	"context"
+	"crypto/rsa"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"log/slog"
+
+	"github.com/cloudflare/circl/hpke"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/go-tpm/tpm2"
+	ev "github.com/openpcc/openpcc/attestation/evidence"
+	tpmhpke "github.com/openpcc/openpcc/tpm/hpke"
+	"github.com/openpcc/openpcc/transparency"
+)
+
+type ConfidentSecurityVerifier struct {
+	transparencyVerifier       TransparencyVerifier
+	transparencyIdentityPolicy transparency.IdentityPolicy
+}
+
+func NewConfidentSecurityVerifier(transparencyVerifier TransparencyVerifier, transparencyIdentityPolicy transparency.IdentityPolicy) *ConfidentSecurityVerifier {
+	return &ConfidentSecurityVerifier{
+		transparencyVerifier:       transparencyVerifier,
+		transparencyIdentityPolicy: transparencyIdentityPolicy,
+	}
+}
+
+func maybeGetEvidencePieceFromList(evidenceType ev.EvidenceType, evidence ev.SignedEvidenceList) *ev.SignedEvidencePiece {
+	for _, piece := range evidence {
+		if piece.Type == evidenceType {
+			return piece
+		}
+	}
+	return nil
+}
+
+func (v *ConfidentSecurityVerifier) VerifyComputeNode(ctx context.Context, evidence ev.SignedEvidenceList) (*ev.ComputeData, error) {
+	if len(evidence) == 0 {
+		return nil, errors.New("no evidence provided")
+	}
+
+	// Log the evidence pieces
+	for _, piece := range evidence {
+		slog.Debug("Recieved evidence piece", "type", piece.Type.String(), "data", piece.Data)
+	}
+
+	// Step 1: verify the Trusted Execution Environment
+	sevSnpTeeEvidence := maybeGetEvidencePieceFromList(ev.SevSnpReport, evidence)
+	tdxTeeEvidence := maybeGetEvidencePieceFromList(ev.TdxReport, evidence)
+
+	// Assert only one of the above TEE evidence pieces is non-nil
+	teeEvidenceCount := 0
+	if sevSnpTeeEvidence != nil {
+		teeEvidenceCount++
+	}
+	if tdxTeeEvidence != nil {
+		teeEvidenceCount++
+	}
+	if teeEvidenceCount != 1 {
+		return nil, fmt.Errorf("expected exactly one TEE evidence piece, got %d", teeEvidenceCount)
+	}
+
+	// Only one of the above variables should be non-nil, handle each in turn
+	switch {
+	case sevSnpTeeEvidence != nil:
+		err := SEVSNPReport(
+			ctx,
+			sevSnpTeeEvidence,
+			false,
+			nil,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify SEVSNP report: %w", err)
+		}
+	case tdxTeeEvidence != nil:
+		rootCert, err := GetTDXRootCert()
+		if err != nil {
+			return nil, err
+		}
+
+		tdxCollateralEvidencePiece := maybeGetEvidencePieceFromList(ev.TdxCollateral, evidence)
+
+		if tdxCollateralEvidencePiece == nil {
+			return nil, errors.New("insufficient evidence for tdx collateral provided")
+		}
+
+		tdxCollateral := ev.TDXCollateral{}
+		err = tdxCollateral.UnmarshalBinary(tdxCollateralEvidencePiece.Data)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = TDXReport(
+			ctx,
+			rootCert,
+			tdxCollateral,
+			tdxTeeEvidence,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify TDX report: %w", err)
+		}
+	default:
+		return nil, errors.New("no TEE evidence provided")
+	}
+
+	// Step 2: Verify the TPM attestation key
+	azureAKCertificateEvidence := maybeGetEvidencePieceFromList(ev.AzureAkCertificate, evidence)
+	gceAKIntermediateCertificateEvidence := maybeGetEvidencePieceFromList(ev.GceAkIntermediateCertificate, evidence)
+	var akPubKey *rsa.PublicKey
+	//nolint:gocritic
+	if gceAKIntermediateCertificateEvidence != nil && azureAKCertificateEvidence == nil {
+		akIntermediateCertificate, err := GceAkIntermediateCertificate(gceAKIntermediateCertificateEvidence)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify GCE AK Intermediate Certificate: %w", err)
+		}
+
+		gceAKCertificateEvidence := maybeGetEvidencePieceFromList(ev.GceAkCertificate, evidence)
+
+		if gceAKCertificateEvidence == nil {
+			return nil, errors.New("insufficient evidence for TPM attestation key provided")
+		}
+
+		akCertificate, gceInstanceInfo, err := GceAkCertificate(*akIntermediateCertificate, gceAKCertificateEvidence)
+
+		if err != nil {
+			return nil, err
+		}
+
+		slog.Debug("GCE Instance Info:", "obj", gceInstanceInfo)
+		slog.Debug("GCE AK Certificate:", "cert", akCertificate)
+
+		gceAKPubKey, ok := akCertificate.PublicKey.(*rsa.PublicKey)
+		if !ok {
+			return nil, errors.New("not able to derive public key from certificate")
+		}
+		akPubKey = gceAKPubKey
+	} else if azureAKCertificateEvidence != nil && gceAKIntermediateCertificateEvidence == nil {
+		akCertificate, err := AzureAkCertificate(azureAKCertificateEvidence)
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify Azure AK Certificate: %w", err)
+		}
+		slog.Debug("Azure AK Certificate:", "cert", akCertificate)
+		azureAKPubKey, ok := akCertificate.PublicKey.(*rsa.PublicKey)
+		if !ok {
+			return nil, errors.New("not able to derive public key from Azure AK certificate")
+		}
+		akPubKey = azureAKPubKey
+	} else {
+		return nil, errors.New("insufficient evidence for TPM attestation key provided")
+	}
+
+	// Step 3: Verify the REK creation
+	certifyREKSignedEvidence := maybeGetEvidencePieceFromList(ev.CertifyRekCreation, evidence)
+
+	if certifyREKSignedEvidence == nil {
+		return nil, errors.New("no evidence for REK creation provided")
+	}
+
+	certifyCreationResponse, err := REKCreation(ctx, akPubKey, certifyREKSignedEvidence)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify REK creation: %w", err)
+	}
+
+	tpmuAttest, err := certifyCreationResponse.Contents()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse REK creation response: %w", err)
+	}
+
+	tpmsCreationInfo, err := tpmuAttest.Attested.Creation()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse REK creation info: %w", err)
+	}
+
+	// Step 4: Verify GPU evidence if applicable
+	gpuEvidence := maybeGetEvidencePieceFromList(ev.NvidiaETA, evidence)
+	if gpuEvidence != nil {
+		slog.Info("Detected GPU evidence")
+		nvidiaCCIntermediateCertificateEvidence := maybeGetEvidencePieceFromList(ev.NvidiaCCIntermediateCertificate, evidence)
+		if nvidiaCCIntermediateCertificateEvidence == nil {
+			return nil, errors.New("no evidence for nvidia cc intermediate certificate provided")
+		}
+		intermediateCert, err := GetIntermediateCert(nvidiaCCIntermediateCertificateEvidence)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get intermediate certificate: %w", err)
+		}
+		encodedSig := base64.RawURLEncoding.EncodeToString(gpuEvidence.Signature)
+		jwtTokenString := fmt.Sprintf("%s.%s", string(gpuEvidence.Data), encodedSig)
+
+		verifier := NewNRASVerifier(intermediateCert)
+		slog.Debug("Verifying nvidia eta", "jwt", jwtTokenString)
+		token, err := verifier.VerifyJWT(jwtTokenString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify nvidia eta: %w", err)
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return nil, errors.New("failed to get claims from token")
+		}
+
+		slog.Debug("Nvidia eta claims", "claims", claims)
+		slog.Info("Verified GPU evidence")
+	}
+
+	nvswitchEvidence := maybeGetEvidencePieceFromList(ev.NvidiaSwitchETA, evidence)
+	if nvswitchEvidence != nil {
+		slog.Info("Detected NvSwitch evidence")
+		nvidiaSwitchIntermediateCertEvidence := maybeGetEvidencePieceFromList(ev.NvidiaSwitchIntermediateCertificate, evidence)
+		if nvidiaSwitchIntermediateCertEvidence == nil {
+			return nil, errors.New("no evidence for nvidia cc intermediate certificate provided")
+		}
+		intermediateCert, err := GetIntermediateCert(nvidiaSwitchIntermediateCertEvidence)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get intermediate certificate: %w", err)
+		}
+		encodedSig := base64.RawURLEncoding.EncodeToString(nvswitchEvidence.Signature)
+		jwtTokenString := fmt.Sprintf("%s.%s", string(nvswitchEvidence.Data), encodedSig)
+
+		verifier := NewNRASVerifier(intermediateCert)
+		slog.Debug("Verifying nvidia eta", "jwt", jwtTokenString)
+		token, err := verifier.VerifyJWT(jwtTokenString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify nvidia eta: %w", err)
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return nil, errors.New("failed to get claims from token")
+		}
+
+		slog.Debug("Nvidia eta claims", "claims", claims)
+		slog.Info("Verified NvSwitch evidence")
+	}
+
+	// Step 5: Verify Quoted PCR Registers
+	tpmQuote := maybeGetEvidencePieceFromList(ev.TpmQuote, evidence)
+	if tpmQuote == nil {
+		return nil, errors.New("no tpm quote provided")
+	}
+
+	validatedPCRValues, err := TPMQuote(ctx, akPubKey, tpmQuote)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate tpm quote: %w", err)
+	}
+
+	// Step 6: Verify the image sigstore bundle
+
+	imageSigstoreBundle := maybeGetEvidencePieceFromList(ev.ImageSigstoreBundle, evidence)
+	if imageSigstoreBundle == nil {
+		return nil, errors.New("no image sigstore bundle provided")
+	}
+
+	imageManifest, err := ImageSigstoreBundle(
+		ctx,
+		imageSigstoreBundle,
+		v.transparencyVerifier,
+		v.transparencyIdentityPolicy,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate image sigstore bundle: %w", err)
+	}
+
+	// Step 7: Verify the eventlog
+	eventLog := maybeGetEvidencePieceFromList(ev.EventLog, evidence)
+
+	err = EventLog(ctx, akPubKey, validatedPCRValues.ToMRs(), eventLog, imageManifest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate event log: %w", err)
+	}
+
+	// Step 8: Verify and retrieve the REK key, check it is sealed to attested pcrs
+	tpmtPublicEvidence := maybeGetEvidencePieceFromList(ev.TpmtPublic, evidence)
+	err = TPMT(tpmsCreationInfo.ObjectName, tpmtPublicEvidence, *validatedPCRValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify TPMT public key: %w", err)
+	}
+
+	tpmtPublic, err := tpm2.Unmarshal[tpm2.TPMTPublic](tpmtPublicEvidence.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal TPMT public key: %w", err)
+	}
+
+	// Convert this public key to the expected format for the HPKE KEM
+	rekECCPublicKey, err := tpmhpke.Pub(tpmtPublic)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to cast rek public key to ECC: %w", err)
+	}
+
+	nodePubKeyB, err := rekECCPublicKey.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal public key to bytes: %w", err)
+	}
+
+	return &ev.ComputeData{
+		KEM:       hpke.KEM_P256_HKDF_SHA256,
+		KDF:       hpke.KDF_HKDF_SHA256,
+		AEAD:      hpke.AEAD_AES128GCM,
+		PublicKey: nodePubKeyB,
+	}, nil
+}

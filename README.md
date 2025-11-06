@@ -6,9 +6,17 @@ OpenPCC is designed to become a transparent, community-governed standard for AI 
 
 Read the OpenPCC Whitepaper: https://github.com/openpcc/openpcc/blob/main/whitepaper/openpcc.pdf
 
+## Managed Service
+
+Confident Security is building a fully managed service, called CONFSEC, based on the OpenPCC standard. To learn more and sign up, visit https://confident.security.
+
 ## OpenPCC Client
 
 This repo contains the code for an OpenPCC compliant go client as well as a c library that is used as the basis of python and javascript clients. In addition, it contains a number of in-memory services that can be used to exercise the client.
+
+## OpenPCC Compute Node
+
+Refer to https://github.com/confidentsecurity/confidentcompute for the related compute node implementation that accompanies this repo.
 
 ### Go Usage
 

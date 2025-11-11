@@ -64,18 +64,26 @@ func GradedNodeEvaluator(g *health.Grader, interval time.Duration) NodeEvaluatio
 		}
 
 		status := g.Grade(history)
-		routingInfo := a.RoutingInfo
+
+		// Log agent state (if available) for debugging.
+		var routingInfo *agent.RoutingInfo
+		if a != nil {
+			routingInfo = a.RoutingInfo
+		}
 		var nodeUrl url.URL
 		var nodeTags tags.Tags
 		if routingInfo != nil {
 			nodeUrl = routingInfo.URL
 			nodeTags = routingInfo.Tags
 		}
-		slog.Info("graded node", "node_url", nodeUrl, "node_tags", nodeTags, "status", status)
+		// Note that the agent info CAN be nil, so we also log history length.
+		slog.Info("graded node", "node_url", nodeUrl, "node_tags", nodeTags, "history_count", len(history), "status", status)
+
 		switch status {
 		case health.StatusOK:
 			// healthy, route to the node if we have the routing info and schedule the next evaluation.
-			return a.RoutingInfo, &interval
+			// Re-use properly dereferenced routing info from potential agent state.
+			return routingInfo, &interval
 		case health.StatusUnknown:
 			// don't route to nodes with an unknown status, but don't drop them (yet). Schedule a next evaluation.
 			return nil, &interval

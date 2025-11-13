@@ -16,8 +16,9 @@ package attest
 import (
 	"context"
 	"crypto"
-	"github.com/openpcc/openpcc/attestation/evidence"
 	"io"
+
+	"github.com/openpcc/openpcc/attestation/evidence"
 
 	"github.com/google/go-eventlog/extract"
 	"github.com/google/go-eventlog/register"

@@ -64,12 +64,20 @@ func (v *ConfidentSecurityVerifier) VerifyComputeNode(ctx context.Context, evide
 	sevSnpTeeEvidence := maybeGetEvidencePieceFromList(ev.SevSnpReport, evidence)
 	tdxTeeEvidence := maybeGetEvidencePieceFromList(ev.TdxReport, evidence)
 
+	var sevSnpExtendedTeeEvidence *ev.SignedEvidencePiece
+	if sevSnpTeeEvidence == nil && tdxTeeEvidence == nil {
+		sevSnpExtendedTeeEvidence = maybeGetEvidencePieceFromList(ev.SevSnpExtendedReport, evidence)
+	}
+
 	// Assert only one of the above TEE evidence pieces is non-nil
 	teeEvidenceCount := 0
 	if sevSnpTeeEvidence != nil {
 		teeEvidenceCount++
 	}
 	if tdxTeeEvidence != nil {
+		teeEvidenceCount++
+	}
+	if sevSnpExtendedTeeEvidence != nil {
 		teeEvidenceCount++
 	}
 	if teeEvidenceCount != 1 {
@@ -118,6 +126,19 @@ func (v *ConfidentSecurityVerifier) VerifyComputeNode(ctx context.Context, evide
 		if err != nil {
 			return nil, fmt.Errorf("failed to verify TDX report: %w", err)
 		}
+	case sevSnpExtendedTeeEvidence != nil:
+		// the extended SEV-SNP report contains the VCEK certificate chain in addition to the report
+		// BareMetalSEVSNPReport verifies the report and the certificate chain
+		err := BareMetalSEVSNPReport(
+			ctx,
+			sevSnpExtendedTeeEvidence,
+			false,
+			nil,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify extended SEVSNP report: %w", err)
+		}
 	default:
 		return nil, errors.New("no TEE evidence provided")
 	}
@@ -125,6 +146,7 @@ func (v *ConfidentSecurityVerifier) VerifyComputeNode(ctx context.Context, evide
 	// Step 2: Verify the TPM attestation key
 	azureAKCertificateEvidence := maybeGetEvidencePieceFromList(ev.AzureAkCertificate, evidence)
 	gceAKIntermediateCertificateEvidence := maybeGetEvidencePieceFromList(ev.GceAkIntermediateCertificate, evidence)
+	akTPMTPublicEvidence := maybeGetEvidencePieceFromList(ev.AkTPMTPublic, evidence)
 	var akPubKey *rsa.PublicKey
 	//nolint:gocritic
 	if gceAKIntermediateCertificateEvidence != nil && azureAKCertificateEvidence == nil {
@@ -165,6 +187,21 @@ func (v *ConfidentSecurityVerifier) VerifyComputeNode(ctx context.Context, evide
 			return nil, errors.New("not able to derive public key from Azure AK certificate")
 		}
 		akPubKey = azureAKPubKey
+	} else if akTPMTPublicEvidence != nil && azureAKCertificateEvidence == nil && gceAKIntermediateCertificateEvidence == nil {
+		// if we have an evidence piece containing the TPMT public of the AK,
+		// we need the SEV-SNP extended report to verify it
+		if sevSnpExtendedTeeEvidence == nil {
+			return nil, errors.New("insufficient evidence for TPM attestation key provided")
+		}
+
+		// compare attestation key TPMTPublic evidence with report data:
+		// make sure the data in the GUID table entry for vTPM matches the TPMTPublic and
+		// set akPubKey to TPMTPublic.Unique
+		bareMetalAKPubKey, err := BareMetalSEVSNPAKPub(ctx, sevSnpExtendedTeeEvidence, akTPMTPublicEvidence)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive public key from extended SEVSNP report: %w", err)
+		}
+		akPubKey = bareMetalAKPubKey
 	} else {
 		return nil, errors.New("insufficient evidence for TPM attestation key provided")
 	}
@@ -267,7 +304,6 @@ func (v *ConfidentSecurityVerifier) VerifyComputeNode(ctx context.Context, evide
 	}
 
 	// Step 6: Verify the image sigstore bundle
-
 	imageSigstoreBundle := maybeGetEvidencePieceFromList(ev.ImageSigstoreBundle, evidence)
 	if imageSigstoreBundle == nil {
 		return nil, errors.New("no image sigstore bundle provided")

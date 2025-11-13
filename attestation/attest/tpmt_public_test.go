@@ -81,7 +81,7 @@ func TestTPMTPublicAttestor_Success(t *testing.T) {
 
 	require.NoError(t, err)
 
-	attestor := attest.NewTPMTPublicAttestor(thetpm, tpmutil.Handle(createSigningResponse.ObjectHandle))
+	attestor := attest.NewTPMTPublicAttestor(thetpm, tpmutil.Handle(createSigningResponse.ObjectHandle), evidence.TpmtPublic)
 
 	se, err := attestor.CreateSignedEvidence(t.Context())
 
@@ -103,7 +103,7 @@ func TestTPMTPublicAttestor_FailureBadHandle(t *testing.T) {
 
 	require.NoError(t, err)
 
-	attestor := attest.NewTPMTPublicAttestor(thetpm, tpmutil.Handle(0x81000000))
+	attestor := attest.NewTPMTPublicAttestor(thetpm, tpmutil.Handle(0x81000000), evidence.TpmtPublic)
 
 	se, err := attestor.CreateSignedEvidence(t.Context())
 

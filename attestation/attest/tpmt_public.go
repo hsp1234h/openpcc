@@ -30,15 +30,18 @@ import (
 type TPMTPublicAttestor struct {
 	tpm                transport.TPM
 	targetObjectHandle tpmutil.Handle
+	evidenceType       evidence.EvidenceType
 }
 
 func NewTPMTPublicAttestor(
 	tpm transport.TPM,
 	targetObjectHandle tpmutil.Handle,
+	evidenceType evidence.EvidenceType,
 ) *TPMTPublicAttestor {
 	return &TPMTPublicAttestor{
 		tpm:                tpm,
 		targetObjectHandle: targetObjectHandle,
+		evidenceType:       evidenceType,
 	}
 }
 
@@ -46,6 +49,8 @@ func (*TPMTPublicAttestor) Name() string {
 	return "TPMTPublicAttestor"
 }
 
+// Returns a SignedEvidencePiece of either type TpmtPublic or AkTmptPublic,
+// based on the evidenceType
 func (a *TPMTPublicAttestor) CreateSignedEvidence(_ context.Context) (*evidence.SignedEvidencePiece, error) {
 	readPublicRequest := tpm2.ReadPublic{
 		ObjectHandle: tpm2.TPMHandle(a.targetObjectHandle),
@@ -64,7 +69,7 @@ func (a *TPMTPublicAttestor) CreateSignedEvidence(_ context.Context) (*evidence.
 	}
 
 	return &evidence.SignedEvidencePiece{
-		Type:      evidence.TpmtPublic,
+		Type:      a.evidenceType,
 		Data:      tpm2.Marshal(publicContents),
 		Signature: readPublicResponse.Name.Buffer,
 	}, nil

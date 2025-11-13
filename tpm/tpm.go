@@ -27,6 +27,56 @@ import (
 	"github.com/google/go-tpm/tpmutil"
 )
 
+func GetRSASSASigningEKTemplate() tpm2.TPMTPublic {
+	// matches the H-8 TPMT public template specified in section B.4.5 of the TCG EK Credential Profile at
+	// https://trustedcomputinggroup.org/wp-content/uploads/TCG-EK-Credential-Profile-for-TPM-Family-2.0-Level-0-Version-2.6_pub.pdf
+	return tpm2.TPMTPublic{
+		Type:    tpm2.TPMAlgRSA,
+		NameAlg: tpm2.TPMAlgSHA256,
+		ObjectAttributes: tpm2.TPMAObject{
+			FixedTPM:            true,
+			FixedParent:         true,
+			SensitiveDataOrigin: true,
+			UserWithAuth:        true,
+			AdminWithPolicy:     true,
+			Restricted:          true,
+			SignEncrypt:         true,
+		},
+		AuthPolicy: tpm2.TPM2BDigest{
+			Buffer: []byte{
+				0xCA, 0x3D, 0x0A, 0x99, 0xA2, 0xB9, 0x39, 0x06, 0xF7, 0xA3, 0x34,
+				0x24, 0x14, 0xEF, 0xCF, 0xB3, 0xA3, 0x85, 0xD4, 0x4C, 0xD1, 0xFD,
+				0x45, 0x90, 0x89, 0xD1, 0x9B, 0x50, 0x71, 0xC0, 0xB7, 0xA0,
+			},
+		},
+		Parameters: tpm2.NewTPMUPublicParms(
+			tpm2.TPMAlgRSA,
+			&tpm2.TPMSRSAParms{
+				Symmetric: tpm2.TPMTSymDefObject{
+					Algorithm: tpm2.TPMAlgNull,
+				},
+				Scheme: tpm2.TPMTRSAScheme{
+					Scheme: tpm2.TPMAlgRSASSA,
+					Details: tpm2.NewTPMUAsymScheme(
+						tpm2.TPMAlgRSASSA,
+						&tpm2.TPMSSigSchemeRSASSA{
+							HashAlg: tpm2.TPMAlgSHA256,
+						},
+					),
+				},
+				KeyBits:  2048,
+				Exponent: 0,
+			},
+		),
+		Unique: tpm2.NewTPMUPublicID(
+			tpm2.TPMAlgRSA,
+			&tpm2.TPM2BPublicKeyRSA{
+				Buffer: make([]byte, 256),
+			},
+		),
+	}
+}
+
 // See [ https://trustedcomputinggroup.org/wp-content/uploads/TPM-Rev-2.0-Part-2-Structures-01.38.pdf ], section 6.12.
 func GetTPMCapability(tpm transport.TPM, property tpm2.TPMPT) (*tpm2.TPMSTaggedProperty, error) {
 	getCapabilitiesCommand := tpm2.GetCapability{

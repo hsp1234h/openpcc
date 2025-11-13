@@ -75,6 +75,8 @@ const (
 	TdxCollateral
 	NvidiaSwitchETA
 	NvidiaSwitchIntermediateCertificate
+	SevSnpExtendedReport
+	AkTPMTPublic
 )
 
 func (s EvidenceType) String() string {
@@ -109,6 +111,10 @@ func (s EvidenceType) String() string {
 		return "NvidiaSwitchETA"
 	case NvidiaSwitchIntermediateCertificate:
 		return "NvidiaSwitchIntermediateCertificate"
+	case SevSnpExtendedReport:
+		return "SevSnpExtendedReport"
+	case AkTPMTPublic:
+		return "AkTPMTPublic"
 	case EvidenceTypeUnspecified:
 		// for completeness, we must include unspecified. revive:useless-fallthrough triggers if there is no comment
 		fallthrough
@@ -157,6 +163,10 @@ func (s EvidenceType) MarshalProto() pb.EvidenceType {
 		return pb.EvidenceType_EVIDENCE_TYPE_NVIDIA_SWITCH_ETA
 	case NvidiaSwitchIntermediateCertificate:
 		return pb.EvidenceType_EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE
+	case SevSnpExtendedReport:
+		return pb.EvidenceType_EVIDENCE_TYPE_SEVSNP_EXTENDED_REPORT
+	case AkTPMTPublic:
+		return pb.EvidenceType_EVIDENCE_TYPE_AK_TPMT_PUBLIC
 	case EvidenceTypeUnspecified:
 		// for completeness, we must include unspecified. revive:useless-fallthrough triggers if there is no comment
 		fallthrough
@@ -197,6 +207,10 @@ func (s *EvidenceType) UnmarshalProto(pbt pb.EvidenceType) error {
 		*s = NvidiaSwitchETA
 	case pb.EvidenceType_EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE:
 		*s = NvidiaSwitchIntermediateCertificate
+	case pb.EvidenceType_EVIDENCE_TYPE_SEVSNP_EXTENDED_REPORT:
+		*s = SevSnpExtendedReport
+	case pb.EvidenceType_EVIDENCE_TYPE_AK_TPMT_PUBLIC:
+		*s = AkTPMTPublic
 	case pb.EvidenceType_EVIDENCE_TYPE_UNSPECIFIED:
 		// for completeness, we must include unspecified. revive:useless-fallthrough triggers if there is no comment
 		fallthrough

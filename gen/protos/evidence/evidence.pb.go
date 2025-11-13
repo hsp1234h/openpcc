@@ -56,6 +56,8 @@ const (
 	EvidenceType_EVIDENCE_TYPE_TDX_COLLATERAL                         EvidenceType = 13
 	EvidenceType_EVIDENCE_TYPE_NVIDIA_SWITCH_ETA                      EvidenceType = 14
 	EvidenceType_EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE EvidenceType = 15
+	EvidenceType_EVIDENCE_TYPE_SEVSNP_EXTENDED_REPORT                 EvidenceType = 16
+	EvidenceType_EVIDENCE_TYPE_AK_TPMT_PUBLIC                         EvidenceType = 17
 )
 
 // Enum value maps for EvidenceType.
@@ -77,6 +79,8 @@ var (
 		13: "EVIDENCE_TYPE_TDX_COLLATERAL",
 		14: "EVIDENCE_TYPE_NVIDIA_SWITCH_ETA",
 		15: "EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE",
+		16: "EVIDENCE_TYPE_SEVSNP_EXTENDED_REPORT",
+		17: "EVIDENCE_TYPE_AK_TPMT_PUBLIC",
 	}
 	EvidenceType_value = map[string]int32{
 		"EVIDENCE_TYPE_UNSPECIFIED":                            0,
@@ -95,6 +99,8 @@ var (
 		"EVIDENCE_TYPE_TDX_COLLATERAL":                         13,
 		"EVIDENCE_TYPE_NVIDIA_SWITCH_ETA":                      14,
 		"EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE": 15,
+		"EVIDENCE_TYPE_SEVSNP_EXTENDED_REPORT":                 16,
+		"EVIDENCE_TYPE_AK_TPMT_PUBLIC":                         17,
 	}
 )
 
@@ -1154,7 +1160,7 @@ const file_evidence_proto_rawDesc = "" +
 	"\vtcb_headers\x18\f \x01(\v2\x19.csprotos.ResponseHeadersR\n" +
 	"tcbHeaders\x12@\n" +
 	"\x1ctcb_intermediate_certificate\x18\r \x01(\fR\x1atcbIntermediateCertificate\x120\n" +
-	"\x14tcb_root_certificate\x18\x0e \x01(\fR\x12tcbRootCertificate*\xed\x04\n" +
+	"\x14tcb_root_certificate\x18\x0e \x01(\fR\x12tcbRootCertificate*\xb9\x05\n" +
 	"\fEvidenceType\x12\x1d\n" +
 	"\x19EVIDENCE_TYPE_UNSPECIFIED\x10\x00\x12*\n" +
 	"&EVIDENCE_TYPE_TPM_CERTIFY_REK_CREATION\x10\x01\x12$\n" +
@@ -1172,7 +1178,9 @@ const file_evidence_proto_rawDesc = "" +
 	"#EVIDENCE_TYPE_IMAGE_SIGSTORE_BUNDLE\x10\f\x12 \n" +
 	"\x1cEVIDENCE_TYPE_TDX_COLLATERAL\x10\r\x12#\n" +
 	"\x1fEVIDENCE_TYPE_NVIDIA_SWITCH_ETA\x10\x0e\x128\n" +
-	"4EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE\x10\x0fB8Z.github.com/openpcc/openpcc/gen/protos/evidence\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
+	"4EVIDENCE_TYPE_NVIDIA_SWITCH_INTERMEDIATE_CERTIFICATE\x10\x0f\x12(\n" +
+	"$EVIDENCE_TYPE_SEVSNP_EXTENDED_REPORT\x10\x10\x12 \n" +
+	"\x1cEVIDENCE_TYPE_AK_TPMT_PUBLIC\x10\x11B8Z.github.com/openpcc/openpcc/gen/protos/evidence\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_evidence_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_evidence_proto_msgTypes = make([]protoimpl.MessageInfo, 8)

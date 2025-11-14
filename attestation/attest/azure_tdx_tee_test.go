@@ -109,6 +109,5 @@ func Test_AzureTDXAttestor_Success(t *testing.T) {
 
 	err = verify.TDXReport(t.Context(), root, *tdxCollateral, se)
 
-	// TODO(CS-1234): Re-enable this test
-	// require.NoError(t, err)
+	require.NoError(t, err)
 }

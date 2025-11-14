@@ -166,6 +166,18 @@ func TestNewClient(t *testing.T) {
 		"fail, no identity policy": func(c *openpcc.Config) {
 			c.TransparencyIdentityPolicy = nil
 		},
+		"fail, identity policy with no issuer or issuer regex": func(c *openpcc.Config) {
+			policy := test.LocalDevIdentityPolicy()
+			policy.OIDCIssuer = ""
+			policy.OIDCIssuerRegex = ""
+			c.TransparencyIdentityPolicy = &policy
+		},
+		"fail, identity policy with no subject or subject regex": func(c *openpcc.Config) {
+			policy := test.LocalDevIdentityPolicy()
+			policy.OIDCSubject = ""
+			policy.OIDCSubjectRegex = ""
+			c.TransparencyIdentityPolicy = &policy
+		},
 	}
 
 	for name, tc := range failTests {

